@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Ancienne version locale du projet : elle ne fait pas partie du rendu final.
+Deploy_My_Second_Model_With_Streamlit/
+Deploy_My_Second_Model_With_Streamlit-20261030T132904Z-1-001.zip
+Reg_Mul_Reg_Ridge_Dec_Tree_Random_Forest.ipynb
+sample_df.csv
