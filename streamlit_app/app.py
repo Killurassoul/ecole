@@ -2,84 +2,153 @@ import json
 from pathlib import Path
 
 import joblib
+import numpy as np
 import pandas as pd
+import plotly.express as px
 import streamlit as st
+from sklearn.cluster import AgglomerativeClustering, KMeans
+from sklearn.decomposition import PCA
+from sklearn.metrics import silhouette_score
+from sklearn.preprocessing import normalize
 
 BASE_DIR = Path(__file__).resolve().parent
+ROOT_DIR = BASE_DIR.parent
 ARTIFACTS_DIR = BASE_DIR / "artifacts"
+DATA_DIR = ROOT_DIR / "data sets"
 
-st.set_page_config(page_title="Machine Learning — Classification et Régression", page_icon="🤖", layout="centered")
+st.set_page_config(page_title="TP Machine Learning", page_icon="🤖", layout="wide")
 
 
 @st.cache_resource
-def load_objects():
-    classifier = joblib.load(ARTIFACTS_DIR / "best_classifier.joblib")
-    regressor = joblib.load(ARTIFACTS_DIR / "best_regressor.joblib")
-    metadata = json.loads((ARTIFACTS_DIR / "metadata.json").read_text(encoding="utf-8"))
-    return classifier, regressor, metadata
+def load_classifier():
+    return joblib.load(ARTIFACTS_DIR / "best_classifier.joblib")
 
 
-classifier, regressor, metadata = load_objects()
+@st.cache_data
+def load_data(file_name):
+    return pd.read_csv(DATA_DIR / file_name)
 
-st.title("🤖 Application de Machine Learning")
-st.write("Cette application utilise uniquement le meilleur modèle de classification et le meilleur modèle de régression, sélectionnés après comparaison dans les notebooks.")
 
-tab_classification, tab_regression = st.tabs(["🌸 Classification", "🚕 Régression"])
+classifier = load_classifier()
+metadata = json.loads((ARTIFACTS_DIR / "metadata.json").read_text(encoding="utf-8"))
 
-with tab_classification:
+st.title("🤖 Travaux pratiques de Machine Learning")
+st.write("Classification Iris et clustering avec K-Means et CAH.")
+tab_iris, tab_clients, tab_ble = st.tabs(
+    ["🌸 Iris — Classification", "📱 Clients — Clustering", "🌾 Blé — Clustering"]
+)
+
+with tab_iris:
     st.subheader("Prédire l'espèce d'une fleur Iris")
-    st.caption(f"Modèle déployé : {metadata['classification']['best_model']}")
+    st.caption(f"Modèle du notebook : {metadata['classification']['best_model']}")
     st.write("Saisis les mesures de la fleur en centimètres.")
-    with st.form("classification_form"):
+    with st.form("iris_form"):
         col1, col2 = st.columns(2)
         with col1:
             sepal_length = st.number_input("Longueur du sépale", min_value=0.0, value=5.8, step=0.1)
-            petal_length = st.number_input("Longueur du pétale", min_value=0.0, value=4.0, step=0.1)
-        with col2:
             sepal_width = st.number_input("Largeur du sépale", min_value=0.0, value=3.0, step=0.1)
+        with col2:
+            petal_length = st.number_input("Longueur du pétale", min_value=0.0, value=4.0, step=0.1)
             petal_width = st.number_input("Largeur du pétale", min_value=0.0, value=1.2, step=0.1)
         classify = st.form_submit_button("Prédire l'espèce")
 
     if classify:
-        input_df = pd.DataFrame([[sepal_length, sepal_width, petal_length, petal_width]], columns=metadata["classification"]["features"])
+        input_df = pd.DataFrame(
+            [[sepal_length, sepal_width, petal_length, petal_width]],
+            columns=metadata["classification"]["features"],
+        )
         prediction = classifier.predict(input_df)[0]
         st.success(f"Espèce prédite : **{prediction}**")
 
-with tab_regression:
-    st.subheader("Prédire le prix d'un trajet de taxi")
-    st.caption(f"Modèle déployé : {metadata['regression']['best_model']}")
-    columns = metadata["regression"]
-    defaults = columns["defaults"]
-    categories = columns["categories"]
 
-    with st.form("regression_form"):
-        col1, col2 = st.columns(2)
-        with col1:
-            distance = st.number_input("Distance du trajet (km)", min_value=0.0, value=float(defaults["Trip_Distance_km"]), step=0.1)
-            time_of_day = st.selectbox("Moment de la journée", categories["Time_of_Day"])
-            day_of_week = st.selectbox("Jour", categories["Day_of_Week"])
-            passenger_count = st.number_input("Nombre de passagers", min_value=1, value=int(round(defaults["Passenger_Count"])), step=1)
-            traffic = st.selectbox("Conditions de circulation", categories["Traffic_Conditions"])
-        with col2:
-            weather = st.selectbox("Météo", categories["Weather"])
-            base_fare = st.number_input("Tarif de base ($)", min_value=0.0, value=float(defaults["Base_Fare"]), step=0.01)
-            per_km_rate = st.number_input("Tarif par km ($)", min_value=0.0, value=float(defaults["Per_Km_Rate"]), step=0.01)
-            per_minute_rate = st.number_input("Tarif par minute ($)", min_value=0.0, value=float(defaults["Per_Minute_Rate"]), step=0.01)
-            duration = st.number_input("Durée du trajet (minutes)", min_value=0.0, value=float(defaults["Trip_Duration_Minutes"]), step=0.1)
-        predict_price = st.form_submit_button("Prédire le prix")
+def clustering_tab(title, file_name, subject, default_clusters):
+    st.subheader(title)
+    st.write("Les données sont normalisées comme dans le notebook du cours.")
+    df = load_data(file_name).dropna().copy()
+    x = normalize(df.values)
 
-    if predict_price:
-        input_df = pd.DataFrame([{
-            "Trip_Distance_km": distance,
-            "Time_of_Day": time_of_day,
-            "Day_of_Week": day_of_week,
-            "Passenger_Count": passenger_count,
-            "Traffic_Conditions": traffic,
-            "Weather": weather,
-            "Base_Fare": base_fare,
-            "Per_Km_Rate": per_km_rate,
-            "Per_Minute_Rate": per_minute_rate,
-            "Trip_Duration_Minutes": duration,
-        }])
-        prediction = regressor.predict(input_df)[0]
-        st.success(f"Prix prédit : **{prediction:.2f} $**")
+    method = st.radio(
+        "Méthode de clustering",
+        ["K-Means", "CAH"],
+        horizontal=True,
+        key=f"method_{subject}",
+    )
+    n_clusters = st.slider(
+        "Nombre de groupes",
+        min_value=2,
+        max_value=8,
+        value=default_clusters,
+        key=f"clusters_{subject}",
+    )
+
+    if method == "K-Means":
+        model = KMeans(
+            n_clusters=n_clusters,
+            init="random",
+            max_iter=500,
+            random_state=42,
+            n_init=10,
+        )
+        partition = model.fit_predict(x)
+    else:
+        model = AgglomerativeClustering(
+            n_clusters=n_clusters,
+            linkage="average",
+        )
+        partition = model.fit_predict(x)
+
+    score = silhouette_score(x, partition)
+    st.metric("Score silhouette", f"{score:.3f}")
+
+    counts = pd.Series(partition).value_counts().sort_index()
+    results = df.copy()
+    results["Groupe"] = partition
+    counts_df = pd.DataFrame(
+        {"Groupe": counts.index.astype(str), f"Nombre de {subject}": counts.values}
+    )
+    fig_counts = px.bar(
+        counts_df,
+        x="Groupe",
+        y=f"Nombre de {subject}",
+        color="Groupe",
+        text_auto=True,
+        title=f"Nombre de {subject} par groupe",
+    )
+    st.plotly_chart(fig_counts, use_container_width=True)
+
+    pca_model = PCA(n_components=2)
+    components = pca_model.fit_transform(x)
+    plot_df = pd.DataFrame(components, columns=["PC1", "PC2"])
+    plot_df["Groupe"] = partition.astype(str)
+    fig_scatter = px.scatter(
+        plot_df,
+        x="PC1",
+        y="PC2",
+        color="Groupe",
+        title=f"Projection des groupes — {method}",
+    )
+    st.plotly_chart(fig_scatter, use_container_width=True)
+    st.caption(
+        f"L'ACP représente les données en deux dimensions pour le graphique "
+        f"({pca_model.explained_variance_ratio_.sum() * 100:.1f}% de variance affichée)."
+    )
+    with st.expander("Voir les données avec le groupe attribué"):
+        st.dataframe(results, use_container_width=True)
+
+
+with tab_clients:
+    clustering_tab(
+        "Segmentation des clients télécom",
+        "Customer_dataset.csv",
+        "clients",
+        3,
+    )
+
+with tab_ble:
+    clustering_tab(
+        "Segmentation des graines de blé",
+        "wheat_seeds_dataset.csv",
+        "graines",
+        3,
+    )
+

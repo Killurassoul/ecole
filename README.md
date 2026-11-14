@@ -1,14 +1,12 @@
 # Projet Machine Learning
 
-## Fichiers à déposer
+## Notebooks à déposer
 
 - `Classification_fleurs_iris.ipynb` : classification des fleurs Iris.
-- `Regression_prix_taxi.ipynb` : régression du prix d'un trajet de taxi.
+- `Clustering_clients_KMeans_CAH.ipynb` : segmentation des clients avec K-Means et CAH.
+- `Clustering_ble_KMeans_CAH.ipynb` : segmentation des graines de blé avec K-Means et CAH.
 
-Les autres modèles sont conservés dans les notebooks pour la comparaison. Les meilleurs modèles seulement sont enregistrés pour le déploiement :
-
-- Classification : `Logistic Regression` → `streamlit_app/artifacts/best_classifier.joblib`
-- Régression : `Random Forest` → `streamlit_app/artifacts/best_regressor.joblib`
+Les deux fichiers de données utilisés par les notebooks de clustering sont dans `data sets/`.
 
 ## Lancer l'application
 
@@ -19,4 +17,5 @@ cd streamlit_app
 streamlit run app.py
 ```
 
-L'application contient un onglet Classification et un onglet Régression.
+L'application regroupe les trois travaux. Dans les deux onglets de clustering, on peut choisir K-Means ou CAH ainsi que le nombre de groupes.
+
