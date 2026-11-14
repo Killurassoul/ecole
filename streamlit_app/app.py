@@ -16,7 +16,7 @@ ROOT_DIR = BASE_DIR.parent
 ARTIFACTS_DIR = BASE_DIR / "artifacts"
 DATA_DIR = ROOT_DIR / "data sets"
 
-st.set_page_config(page_title="TP Machine Learning", page_icon="🤖", layout="wide")
+st.set_page_config(page_title="TP Machine Learning", layout="wide")
 
 
 @st.cache_resource
@@ -32,10 +32,10 @@ def load_data(file_name):
 classifier = load_classifier()
 metadata = json.loads((ARTIFACTS_DIR / "metadata.json").read_text(encoding="utf-8"))
 
-st.title("🤖 Travaux pratiques de Machine Learning")
+st.title("TP Machine Learning")
 st.write("Classification Iris et clustering avec K-Means et CAH.")
 tab_iris, tab_clients, tab_ble = st.tabs(
-    ["🌸 Iris — Classification", "📱 Clients — Clustering", "🌾 Blé — Clustering"]
+    ["Iris", "Clients", "Blé"]
 )
 
 with tab_iris:
@@ -63,7 +63,7 @@ with tab_iris:
 
 def clustering_tab(title, file_name, subject, default_clusters):
     st.subheader(title)
-    st.write("Les données sont normalisées comme dans le notebook du cours.")
+    st.write("Choisis une méthode et le nombre de groupes.")
     df = load_data(file_name).dropna().copy()
     x = normalize(df.values)
 
